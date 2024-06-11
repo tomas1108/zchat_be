@@ -1,0 +1,32 @@
+# Node & npm
+node_modules/
+npm-debug.log
+
+# Yarn
+yarn-error.log
+
+# OS-generated files
+.DS_Store
+Thumbs.db
+
+# Editor files
+*.swp
+*.swo
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+
+# Build files
+build/
+dist/
+
+# Dependency directory
+bower_components/
+
+# Environment variables
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
