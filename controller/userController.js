@@ -143,7 +143,7 @@ exports.getRequests = catchAsync(async (req, res, next) => {
 exports.getFriends = catchAsync(async (req, res, next) => {
   const this_user = await User.findById(req.user._id).populate(
     "friends",
-    "_id firstName lastName"
+    "_id firstName lastName avatar"
   );
 
   // Kiểm tra nếu this_user.friends là mảng rỗng
@@ -163,7 +163,32 @@ exports.getFriends = catchAsync(async (req, res, next) => {
   });
 });
 
+exports.deleteFriend = catchAsync(async (req, res, next) => {
+  const { friendId } = req.body;
+  const userId = req.user._id;
 
+  // Remove friendId from this user's friends list
+  const updatedUser = await User.findByIdAndUpdate(
+    userId,
+    { $pull: { friends: friendId } },
+    { new: true }
+  );
+
+  // Remove userId from the friend's friends list
+  const updatedFriend = await User.findByIdAndUpdate(
+    friendId,
+    { $pull: { friends: userId } },
+    { new: true }
+  );
+
+  res.status(200).json({
+    status: "success",
+    message: "Friend deleted successfully",
+    data: updatedUser.friends, // Optionally, return the updated friends list
+  });
+
+  console.log(updatedUser.friends); 
+});
 /**
  * Authorization authentication token generation
  */

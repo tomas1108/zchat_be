@@ -15,6 +15,7 @@ router.get("/get-all-verified-users", authController.protect, userController.get
 router.get("/get-users", authController.protect, userController.getUsers);
 router.get("/get-requests", authController.protect, userController.getRequests);
 router.get("/get-friends", authController.protect, userController.getFriends);
+router.post("/delete-friends", authController.protect, userController.deleteFriend);
 
 
 
