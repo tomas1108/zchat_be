@@ -38,6 +38,27 @@ exports.updateMe = catchAsync(async (req, res, next) => {
   });
 });
 
+
+
+// exports.getUsers = catchAsync(async (req, res, next) => {
+//   const all_users = await User.find({
+//   verified: true,
+//   }).select("firstName lastName _id email avatar");
+  
+//   const this_user = req.user;
+  
+//   const remaining_users = all_users.filter(
+//   (user) =>
+//   !this_user.friends.includes(user._id) &&
+//   user._id.toString() !== req.user._id.toString()
+//   );
+  
+//   res.status(200).json({
+//   status: "success",
+//   data: remaining_users,
+//   message: "Users found successfully!",
+//   });
+//   });
 exports.getUsers = catchAsync(async (req, res, next) => {
   const all_users = await User.find({
     verified: true,
@@ -45,19 +66,50 @@ exports.getUsers = catchAsync(async (req, res, next) => {
 
   const this_user = req.user;
 
-  const remaining_users = all_users.filter(
-    (user) =>
-      !this_user.friends.includes(user._id) &&
-      user._id.toString() !== req.user._id.toString()
-  );
+  // Lấy tất cả các yêu cầu kết bạn liên quan đến người dùng hiện tại
+  const friendRequests = await FriendRequest.find({
+    $or: [
+      { sender: this_user._id },
+      { recipient: this_user._id }
+    ]
+  });
+
+  // Tạo một đối tượng để lưu trữ trạng thái yêu cầu kết bạn
+  const requestStatus = {};
+
+  friendRequests.forEach(request => {
+    if (request.sender.toString() === this_user._id.toString()) {
+      requestStatus[request.recipient.toString()] = request.status;
+    } else if (request.recipient.toString() === this_user._id.toString()) {
+      requestStatus[request.sender.toString()] = request.status;
+    }
+  });
 
 
+  // Lọc danh sách người dùng để loại trừ bạn bè và người dùng hiện tại
+  const remaining_users = all_users
+    .filter(
+      (user) =>
+        !this_user.friends.includes(user._id) &&
+        user._id.toString() !== req.user._id.toString()
+    )
+    .map((user) => {
+      return {
+        ...user._doc,
+        requestStatus: requestStatus[user._id.toString()] || "none" // Thêm trạng thái yêu cầu kết bạn
+      };
+    });
+
+  
   res.status(200).json({
     status: "success",
     data: remaining_users,
-    message: "Users found successfully!",
+
   });
+
+  console.log(remaining_users);
 });
+
 
 exports.getAllVerifiedUsers = catchAsync(async (req, res, next) => {
   const all_users = await User.find({
@@ -71,15 +123,16 @@ exports.getAllVerifiedUsers = catchAsync(async (req, res, next) => {
   res.status(200).json({
     status: "success",
     data: remaining_users,
-    message: "Users found successfully!",
+
   });
 });
-
 exports.getRequests = catchAsync(async (req, res, next) => {
+  console.log(req.user._id);
   const requests = await FriendRequest.find({ recipient: req.user._id })
     .populate("sender")
     .select("_id firstName lastName");
 
+    console.log(requests);
   res.status(200).json({
     status: "success",
     data: requests,
@@ -92,12 +145,24 @@ exports.getFriends = catchAsync(async (req, res, next) => {
     "friends",
     "_id firstName lastName"
   );
+
+  // Kiểm tra nếu this_user.friends là mảng rỗng
+  if (!this_user.friends || this_user.friends.length === 0) {
+    return res.status(200).json({
+      status: "success",
+      data: [], // Trả về mảng rỗng
+      message: "No friends found.",
+    });
+  }
+
+  // Nếu this_user.friends không rỗng, trả về danh sách bạn bè
   res.status(200).json({
     status: "success",
     data: this_user.friends,
     message: "Friends found successfully!",
   });
 });
+
 
 /**
  * Authorization authentication token generation

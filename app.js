@@ -39,15 +39,15 @@ const limiter = rateLimit({
 });
 
 // Áp dụng Rate Limiter cho các route của bạn
-app.use(authRoutes, limiter);
+// app.use(authRoutes, limiter);
 
-// Middleware xử lý khi vượt quá giới hạn của Rate Limiter
-app.use((req, res, next) => {
-    if (req.rateLimit.remaining === 0) {
-        return res.status(429).send('Too many requests from this IP, please try again later.');
-    }
-    next();
-});
+// // Middleware xử lý khi vượt quá giới hạn của Rate Limiter
+// app.use((req, res, next) => {
+//     if (req.rateLimit.remaining === 0) {
+//         return res.status(429).send('Too many requests from this IP, please try again later.');
+//     }
+//     next();
+// });
 
 
 app.use(express.urlencoded({

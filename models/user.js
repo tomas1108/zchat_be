@@ -86,6 +86,8 @@ const userSchema = new mongoose.Schema({
   }
 });
 
+
+
 userSchema.pre("save", async function (next) {
   // Only run this function if password was actually modified
   if (!this.isModified("otp") || !this.otp) return next();

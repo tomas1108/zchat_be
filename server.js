@@ -71,10 +71,11 @@ io.on("connection", async (socket) => {
 
       console.log("To:", to); 
       console.log("From:", from);
-      // await FriendRequest.create({
-      //   sender: data.from,
-      //   recipient: data.to,
-      // });
+      await FriendRequest.create({
+        sender: data.from,
+        recipient: data.to,
+        status: 'pending', // Đặt trạng thái mặc định là pending
+      });
 
       io.to(to?.socket_id).emit("new_friend_request", {
         message: "New friend request received",
@@ -86,7 +87,71 @@ io.on("connection", async (socket) => {
       console.error("Error:", error);
     }
   });
+
+  // socket.on('friend_request', async (data) => {
+  //   try {
+  //     console.log("Data received on server:", data);
+      
+  //     const { to, from } = data;
+  //     const toUser = await User.findById(to).select("socket_id");
+  //     const fromUser = await User.findById(from).select("socket_id");
+
+  //     if (!toUser || !fromUser) {
+  //       console.error("Sender or recipient not found");
+  //       return;
+  //     }
+
+  //     const response = await User.createRequest(from, to); // Gọi phương thức createRequest
+
+  //     io.to(toUser.socket_id).emit("new_friend_request", {
+  //       message: "New friend request received",
+  //     });
+  //     io.to(fromUser.socket_id).emit("request_sent", {
+  //       message: "Request Sent successfully!",
+  //     });
+
+  //   } catch (error) {
+  //     console.error("Error:", error);
+  //   }
+  // });
+  // socket.on('cancel_request', async (data) => {
+  //   try {
+  //     console.log("Data received on server for cancel request:", data);
+  //     const to = await User.findById(data.to).select("socket_id");
+  //     const from = await User.findById(data.from).select("socket_id");
   
+  //     const response = await User.cancelRequest(data.from, data.to);
+  
+  //     io.to(to?.socket_id).emit("friend_request_canceled", {
+  //       message: "Friend request canceled",
+  //     });
+  //     io.to(from?.socket_id).emit("request_cancelled", {
+  //       message: "Request cancelled successfully!",
+  //     });
+  //   } catch (error) {
+  //     console.error("Error:", error);
+  //   }
+  // });   
+  
+
+
+
+  
+  socket.on("cancel_request", async (data) => { 
+    try {
+      await FriendRequest.findOneAndDelete({
+        sender: data.from,
+        recipient: data.to,
+        status: 'pending', // Đảm bảo chỉ hủy những lời mời đang ở trạng thái pending
+
+      });
+    } catch (error) {
+      console.error("Error:", error);
+    }
+
+  });
+
+  // });
 
   //   socket.on("accept_request", async (data) => {
   //     try {
