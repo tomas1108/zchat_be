@@ -44,15 +44,15 @@ exports.updateMe = catchAsync(async (req, res, next) => {
 //   const all_users = await User.find({
 //   verified: true,
 //   }).select("firstName lastName _id email avatar");
-  
+
 //   const this_user = req.user;
-  
+
 //   const remaining_users = all_users.filter(
 //   (user) =>
 //   !this_user.friends.includes(user._id) &&
 //   user._id.toString() !== req.user._id.toString()
 //   );
-  
+
 //   res.status(200).json({
 //   status: "success",
 //   data: remaining_users,
@@ -100,7 +100,7 @@ exports.getUsers = catchAsync(async (req, res, next) => {
       };
     });
 
-  
+
   res.status(200).json({
     status: "success",
     data: remaining_users,
@@ -132,7 +132,7 @@ exports.getRequests = catchAsync(async (req, res, next) => {
     .populate("sender")
     .select("_id firstName lastName");
 
-    console.log(requests);
+  console.log(requests);
   res.status(200).json({
     status: "success",
     data: requests,
@@ -187,7 +187,7 @@ exports.deleteFriend = catchAsync(async (req, res, next) => {
     data: updatedUser.friends, // Optionally, return the updated friends list
   });
 
-  console.log(updatedUser.friends); 
+  console.log(updatedUser.friends);
 });
 /**
  * Authorization authentication token generation
@@ -197,7 +197,7 @@ exports.generateZegoToken = catchAsync(async (req, res, next) => {
   try {
     const { userId, room_id } = req.body;
 
-   
+
 
     const effectiveTimeInSeconds = 3600; //type: number; unit: s; token expiration time, unit: second
     const payloadObject = {
@@ -362,3 +362,4 @@ exports.generateZegoToken = catchAsync(async (req, res, next) => {
 //     data: call_logs,
 //   });
 // });
+

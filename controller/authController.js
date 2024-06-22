@@ -8,7 +8,7 @@ const filterObj = require("../utils/filterObj");
 const sendEmail = require("../services/mailer");
 const S3_BUCKET_NAME = 'codingmonk';
 const AWS_S3_REGION = 'ap-south-1'; // eg. ap-south-1
-const { format } = require('date-fns'); 
+const { format } = require('date-fns');
 
 
 
@@ -16,10 +16,11 @@ const { format } = require('date-fns');
 const User = require("../models/user");
 const { promisify } = require("util");
 const catchAsync = require("../utils/catchAsync");
+const { getNotificationCountAndMessagesByUser } = require("./notificationController");
 
 // this function will return you jwt token
 const signToken = (userId) => jwt.sign({ userId }, process.env.JWT_SECRET);
-const getCurrentDate = () =>{
+const getCurrentDate = () => {
   const currentDate = new Date();
 
   // Định dạng ngày hiện tại thành "YYYY-MM-DD"
@@ -188,7 +189,12 @@ exports.login = catchAsync(async (req, res, next) => {
   }
 
   const token = signToken(user._id);
+  let notification = await getNotificationCountAndMessagesByUser(user._id);
+  console.log(" noti",notification);
 
+  if (!notification) {
+    notification = { count: null, messages: null }; // Không có thông báo, trả về mảng rỗng và count là 0
+  }
   res.status(200).json({
     status: "success",
     message: "Logged in successfully!",
@@ -198,12 +204,13 @@ exports.login = catchAsync(async (req, res, next) => {
     user_email: user.email,
     user_birthDate: user.birthDate,
     user_gender: user.gender,
-    user_avatar: user.avatar
-
+    user_avatar: user.avatar,
+    noti_count: notification.count,
+    noti_messages: notification.messages,
   });
 });
 
-exports.loginWithGG = catchAsync(async (req, res, next) => { 
+exports.loginWithGG = catchAsync(async (req, res, next) => {
 
   const { idToken } = req.body;
 
@@ -219,11 +226,11 @@ exports.loginWithGG = catchAsync(async (req, res, next) => {
     console.error('Lỗi xác thực ID token:', error);
     res.status(401).send('Không được phép');
   }
-   
-  
-  
-  
-});  
+
+
+
+
+});
 // Protect
 exports.protect = catchAsync(async (req, res, next) => {
   // 1) Getting token and check if it's there

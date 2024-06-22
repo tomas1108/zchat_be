@@ -13,7 +13,11 @@ const { Server } = require("socket.io"); // Add this
 const User = require("./models/user");
 const { error } = require("console");
 const FriendRequest = require("./models/friendRequest");
+const Notification = require("./models/notification");
+
+
 const { stat } = require("fs");
+const { addMessageToUserNotifications, getNotificationCountByUser, getNotificationCountAndMessagesByUser } = require("./controller/notificationController");
 const DB = process.env.DBURL.replace("<PASSWORD", process.env.DBPASSWORD);
 
 // Create an io server and allow for CORS from http://localhost:3000 with GET and POST methods
@@ -39,6 +43,10 @@ mongoose.connect(DB, {
     console.error('Error connecting to MongoDB:', err);
   });
 // Listen for when the client connects via socket.io-client
+
+
+
+
 io.on("connection", async (socket) => {
   ///bắt tay với client
 
@@ -46,13 +54,13 @@ io.on("connection", async (socket) => {
   console.log(`User connected ${socket.id}`);
   if (user_id != null && Boolean(user_id)) {
     try {
-     await User.findByIdAndUpdate(user_id, {
+      await User.findByIdAndUpdate(user_id, {
         socket_id: socket.id,
         status: "Online",
-      
+
       });
-      
-   
+
+
     } catch (e) {
       console.log(e);
     }
@@ -68,8 +76,13 @@ io.on("connection", async (socket) => {
       console.log("Data received on server:", data);
       const to = await User.findById(data.to).select("socket_id");
       const from = await User.findById(data.from).select("socket_id");
+      const user_data= await User.getNameByUserId(data.from);
+      const user_name = user_data.firstName + " " + user_data.lastName;
+      const user_avatar = user_data.avatar;
+      console.log("User Data:", user_data);
+      
 
-      console.log("To:", to); 
+      console.log("To:", to);
       console.log("From:", from);
       await FriendRequest.create({
         sender: data.from,
@@ -77,16 +90,35 @@ io.on("connection", async (socket) => {
         status: 'pending', // Đặt trạng thái mặc định là pending
       });
 
+      addMessageToUserNotifications(data.to, 'Bạn có lời mời kết bạn mới từ'+ user_name )
+        .then(updatedNotification => {
+          console.log("Updated Notification:", updatedNotification);
+        })
+        .catch(error => {
+          // Xử lý khi có lỗi
+        });
+
       io.to(to?.socket_id).emit("new_friend_request", {
-        message: `Bạn có lời mời kết bạn mới từ`,
+        message: `Bạn có lời mời kết bạn mới từ ${user_name}`,
       });
-   
+
     } catch (error) {
       console.error("Error:", error);
     }
   });
 
-  socket.on("cancel_request", async (data) => { 
+
+  socket.on("clear_notifications", async (data) => {
+    try {
+      await Notification.findOneAndDelete({
+        user: data.user_id,
+      });
+    } catch (error) {
+      console.error("Error:", error);
+    }
+  });
+
+  socket.on("cancel_request", async (data) => {
     try {
       await FriendRequest.findOneAndDelete({
         sender: data.from,
@@ -103,14 +135,10 @@ io.on("connection", async (socket) => {
 
   socket.on("accept_request", async (data) => {
     // accept friend request => add ref of each other in friends array
-    console.log(data);
+
     const request_doc = await FriendRequest.findById(data.request_id);
-
-    console.log(request_doc);
-
     const sender = await User.findById(request_doc.sender);
     const receiver = await User.findById(request_doc.recipient);
-
     sender.friends.push(request_doc.recipient);
     receiver.friends.push(request_doc.sender);
 
@@ -123,20 +151,47 @@ io.on("connection", async (socket) => {
     // emit event to both of them
 
     // emit event request accepted to both
+    const user_dataSend = await User.getNameByUserId(sender._id);
+    const user_name = user_dataSend.firstName + " " + user_dataSend.lastName;
+    const user_avatar = user_dataSend.avatar;
+
+    const user_dataReceive = await User.getNameByUserId(receiver._id);
+    const user_nameReceive = user_dataReceive.firstName + " " + user_dataReceive.lastName;
+    const user_avatarReceive = user_dataReceive.avatar;
+
+    await addMessageToUserNotifications(sender._id, `Bạn và ${user_nameReceive} đã trở thành bạn bè`);
+    await addMessageToUserNotifications(receiver._id,`Bạn và ${user_name} đã trở thành bạn bè`);
+
+ 
+
+
+
     io.to(sender?.socket_id).emit("request_accepted", {
-      message: "Friend Request Accepted",
+      message: `Bạn và ${user_nameReceive} đã trở thành bạn bè`,
     });
     io.to(receiver?.socket_id).emit("request_accepted", {
-      message: "Friend Request Accepted",
+      message: `Bạn và ${user_name} đã trở thành bạn bè`,
     });
   });
 
 
+  socket.emit("get_notifications", async (data, callback) => {
 
+    try {
+
+      console.log("User ID:", user_id);
+      const notification = await getNotificationCountAndMessagesByUser(user_id);
+      callback(notification);
+      console.log("Notification:", notification);
+    } catch (error) {
+      console.error("Error:", error);
+    }
+
+  });
   // socket.on('friend_request', async (data) => {
   //   try {
   //     console.log("Data received on server:", data);
-      
+
   //     const { to, from } = data;
   //     const toUser = await User.findById(to).select("socket_id");
   //     const fromUser = await User.findById(from).select("socket_id");
@@ -164,9 +219,9 @@ io.on("connection", async (socket) => {
   //     console.log("Data received on server for cancel request:", data);
   //     const to = await User.findById(data.to).select("socket_id");
   //     const from = await User.findById(data.from).select("socket_id");
-  
+
   //     const response = await User.cancelRequest(data.from, data.to);
-  
+
   //     io.to(to?.socket_id).emit("friend_request_canceled", {
   //       message: "Friend request canceled",
   //     });

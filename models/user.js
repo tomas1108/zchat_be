@@ -159,3 +159,9 @@ userSchema.methods.createPasswordResetToken = function () {
 
 const User = new mongoose.model("User", userSchema);
 module.exports = User;
+
+const getNameByUserId = async (userId) => {
+  const user= await User.findById(userId).select("firstName lastName avatar");
+  return user;
+}
+module.exports.getNameByUserId = getNameByUserId;
